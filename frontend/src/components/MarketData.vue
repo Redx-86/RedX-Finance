@@ -1,41 +1,44 @@
 <template>
-  <div>
-    <h1>Current BTC/USDT Price: {{ price ? price : "Loading..." }}</h1>
+  <div id="app">
+    <h1>Live Market Data</h1>
+    <p>Current BTC/USDT Price: {{ price }}</p>
   </div>
 </template>
 
 <script>
-import { io } from "socket.io-client";
-
 export default {
   data() {
     return {
-      price: null, // Veriyi burada saklıyoruz
+      price: "Loading...",
     };
   },
-  mounted() {
-    // Backend'e bağlanıyoruz
-    this.socket = io("http://localhost:5000"); // Backend'in çalıştığı URL
-
-    // "priceUpdate" event'ini dinliyoruz
-    this.socket.on("priceUpdate", (data) => {
-      this.price = data.price; // Fiyatı state'e kaydediyoruz
-    });
+  created() {
+    this.connectWebSocket();
   },
-  beforeDestroy() {
-    // Component unmount olduğunda bağlantıyı kesiyoruz
-    if (this.socket) {
-      this.socket.disconnect();
-    }
+  methods: {
+    connectWebSocket() {
+      const socket = new WebSocket("ws://localhost:8080"); // Rust backend'in WebSocket sunucusunun adresi
+
+      socket.onopen = () => {
+        console.log("Connected to WebSocket");
+      };
+
+      socket.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        this.price = data.price; // Gelen fiyat bilgisini güncelle
+      };
+
+      socket.onclose = () => {
+        console.log("WebSocket connection closed");
+      };
+    },
   },
 };
 </script>
 
 <style scoped>
-/* Buraya sadece bu bileşene özel CSS yazabilirsiniz */
-h1 {
-  font-size: 2em;
+#app {
   text-align: center;
-  color: #333;
+  font-family: Arial, sans-serif;
 }
 </style>
